@@ -24,6 +24,7 @@ Aplikacja hobbystyczna, tylko dla autora. Użytkownik wgrywa ustawę (PDF lub DO
 
 ## Ograniczenia
 - Silnik: darmowe API Google Gemini, klucz generuje użytkownik w Google AI Studio i wkleja do strony (przechowywany w localStorage przeglądarki; nigdy nie wysyłany nigdzie poza Google).
+- **Klucz API nigdy nie jest zapisany w kodzie ani w repozytorium** (wymóg autora). Użytkownik wpisuje go w polu na stronie; testy i przykłady nie zawierają prawdziwych kluczy.
 - Wszystko działa w przeglądarce (statyczna strona, bez instalacji).
 - Darmowe limity Gemini (zapytania/min, tokeny/min, zapytania/dzień) mogą spowalniać duże ustawy.
 
