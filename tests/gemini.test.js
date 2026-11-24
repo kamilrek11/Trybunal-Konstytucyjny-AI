@@ -89,3 +89,9 @@ test('prompt zawiera Konstytucję, artykuły ustawy i zakaz zmyślania', () => {
   assert.ok(p.includes('Art. 1. Treść.'));
   assert.ok(/dosłown/i.test(p));
 });
+
+test('odpowiedź w ogrodzeniu ```json jest akceptowana', async () => {
+  const fenced = { candidates: [{ content: { parts: [{ text: '```json\n' + JSON.stringify({ findings: [finding] }) + '\n```' }] } }] };
+  const r = await analyzeBatch({ ...base, fetchImpl: async () => res(200, fenced) });
+  assert.deepStrictEqual(r, [finding]);
+});

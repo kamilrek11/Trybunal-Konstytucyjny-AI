@@ -27,10 +27,10 @@
   }
 
   function renderResult(report, rejectedCount) {
+    const c = report.counts;
     const root = $('result');
     root.replaceChildren();
     root.append(el('div', { class: 'disclaimer' }, 'Szacunek AI, nie opinia prawna ani orzeczenie Trybunału.'));
-    const c = report.counts;
     root.append(el('div', { class: 'card score' }, [
       el('div', { class: 'hint' }, 'Zgodność z Konstytucją (orientacyjnie)'),
       el('div', { class: 'pct' }, `~${Math.round(report.score)}%`),
@@ -38,6 +38,7 @@
       el('div', { class: 'counts' }, [
         `🔴 niezgodne: ${c.niezgodny}`, `🟡 wątpliwe: ${c.watpliwy}`, `🟢 zgodne: ${c.zgodny}`,
         ...(rejectedCount ? [`odrzucone jako niezweryfikowane: ${rejectedCount}`] : []),
+        ...(c.unanalyzed ? [`⚠ nieprzeanalizowane (błąd odpowiedzi modelu): ${c.unanalyzed}`] : []),
       ].map((t) => el('span', {}, t))),
     ]));
     if (!report.findings.length) {
@@ -58,6 +59,7 @@
   }
 
   async function runAnalysis(file) {
+    if (controller) return; // trwa już analiza
     $('error').hidden = true;
     $('result').hidden = true;
     const apiKey = $('apiKey').value.trim();
@@ -74,19 +76,17 @@
       const articles = TK.splitArticles(text);
       const batches = TK.batchArticles(articles);
       $('progress').max = batches.length;
-      const all = [];
-      for (let i = 0; i < batches.length; i++) {
-        $('statusText').textContent = `Analizuję paczkę ${i + 1} z ${batches.length}…`;
+      const { findings: all, unanalyzed } = await TK.analyzeBatches(batches, async (batch) => {
         const found = await TK.analyzeBatch({
-          apiKey, batch: batches[i], constitutionFullText: TK.CONSTITUTION.fullText,
+          apiKey, batch, constitutionFullText: TK.CONSTITUTION.fullText,
           model: $('model').value.trim() || TK.DEFAULT_MODEL, signal: controller.signal,
           sleep: (ms) => { $('statusText').textContent = `Czekam na limit darmowego API (${Math.round(ms / 1000)} s)…`; return new Promise((r) => setTimeout(r, ms)); },
         });
-        all.push(...found);
-        $('progress').value = i + 1;
-      }
+        $('progress').value += 1;
+        return found;
+      }, (i, n) => { $('statusText').textContent = `Analizuję paczkę ${i + 1} z ${n}…`; });
       const { valid, rejected } = TK.validateFindings(all, text, TK.CONSTITUTION);
-      renderResult(TK.buildReport(articles, valid, rejected), rejected.length);
+      renderResult(TK.buildReport(articles, valid, rejected, unanalyzed), rejected.length);
       $('status').hidden = true;
     } catch (e) {
       if (e && e.kind === 'aborted') { $('status').hidden = true; return; }

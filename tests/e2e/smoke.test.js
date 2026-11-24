@@ -35,7 +35,7 @@ async function open(browser, handler) {
     }));
     await page.setInputFiles('#file', fx('ustawa.docx'));
     await page.waitForSelector('#result:not([hidden])');
-    assert.match(await page.textContent('#result'), /~75%/);
+    assert.match(await page.textContent('#result'), /~67%/);
     assert.strictEqual(await page.locator('.finding').count(), 1);
     assert.match(await page.textContent('#result'), /odrzucone jako niezweryfikowane: 1/);
     assert.match(await page.textContent('#result'), /Szacunek AI, nie opinia prawna/);
@@ -75,6 +75,25 @@ async function open(browser, handler) {
     assert.deepStrictEqual(dialogs, []);
     await page.close();
     console.log('PASS 3: HTML z ustawy nie jest wykonywany');
+  }
+
+  // 4. druga analiza w trakcie pierwszej nie startuje
+  {
+    let release;
+    const gate = new Promise((r) => { release = r; });
+    const { page, requests } = await open(browser, async (route) => {
+      await gate;
+      return route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify(gemini({ findings: [] })) });
+    });
+    await page.setInputFiles('#file', fx('ustawa.docx'));
+    await page.waitForFunction(() => /paczk/.test(document.getElementById('statusText').textContent));
+    await page.setInputFiles('#file', fx('xss.docx'));
+    await page.waitForTimeout(300);
+    release();
+    await page.waitForSelector('#result:not([hidden])');
+    assert.strictEqual(requests.length, 1);
+    await page.close();
+    console.log('PASS 4: brak nakładających się analiz');
   }
 
   await browser.close();

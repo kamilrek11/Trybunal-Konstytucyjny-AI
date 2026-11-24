@@ -1,5 +1,6 @@
 (function (root) {
-  const ART_START = /^[ \t]*Art\.\s*(\d+[a-z]*)\./gm;
+  const ART_START = /^[ \t]*Art\.\s*(\d+[a-z]*[\u2070\u00B9\u00B2\u00B3\u2074-\u2079]*)\./gm;
+  const QUOTE_LOOKAHEAD = 20000;
   const FRAGMENT_TARGET = 3000;
   const FRAGMENT_MAX = 4000;
 
@@ -31,8 +32,30 @@
     return out.map((t, i) => ({ label: `Fragment ${i + 1}`, text: t }));
   }
 
+  // Artykuł wewnątrz cytowanej nowelizacji („Art. 3a. ... ") nie jest artykułem ustawy.
+  // Cudzysłów liczy się tylko, gdy zamyka się w rozsądnej odległości (niedomknięty nie połyka reszty).
+  function insideQuote(text, index) {
+    const open = text.lastIndexOf('„', index);
+    if (open < 0) return false;
+    const closeBefore = text.indexOf('”', open);
+    if (closeBefore >= 0 && closeBefore < index) return false;
+    const closeAfter = text.indexOf('”', index);
+    return closeAfter >= 0 && closeAfter - index <= QUOTE_LOOKAHEAD;
+  }
+
+  function uniqueLabels(items) {
+    const seen = new Map();
+    return items.map((a) => {
+      const n = (seen.get(a.label) || 0) + 1;
+      seen.set(a.label, n);
+      return n === 1 ? a : { ...a, label: `${a.label} (${n})` };
+    });
+  }
+
   function splitArticles(text) {
-    const starts = [...text.matchAll(ART_START)].map((m) => ({ index: m.index, num: m[1] }));
+    const starts = [...text.matchAll(ART_START)]
+      .filter((m) => !insideQuote(text, m.index))
+      .map((m) => ({ index: m.index, num: m[1] }));
     if (starts.length === 0) return splitFragments(text);
     const out = [];
     const preamble = text.slice(0, starts[0].index).trim();
@@ -41,10 +64,10 @@
       const end = i + 1 < starts.length ? starts[i + 1].index : text.length;
       out.push({ label: `Art. ${s.num}`, text: text.slice(s.index, end).trim() });
     });
-    return out;
+    return uniqueLabels(out);
   }
 
-  function batchArticles(articles, maxChars = 12000) {
+  function batchArticles(articles, maxChars = 40000) {
     const batches = [];
     let cur = [];
     let size = 0;

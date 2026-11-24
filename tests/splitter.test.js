@@ -39,3 +39,28 @@ test('batchArticles nie przekracza limitu poza pojedynczym długim artykułem', 
   const batches = batchArticles(arts, 1000);
   assert.deepStrictEqual(batches.map((b) => b.map((a) => a.label)), [['Art. 1', 'Art. 2'], ['Art. 3'], ['Art. 4']]);
 });
+
+test('artykuły w cytowanej nowelizacji nie są osobnymi artykułami ustawy', () => {
+  const t = 'Art. 1. W ustawie dodaje się art. 3a i 3b w brzmieniu:\n„Art. 3a. Treść a.\nArt. 3b. Treść b.”;\nArt. 2. Drugi.\nArt. 3. Trzeci.';
+  assert.deepStrictEqual(splitArticles(t).map((a) => a.label), ['Art. 1', 'Art. 2', 'Art. 3']);
+});
+
+test('niedomknięty cudzysłów nie połyka kolejnych artykułów', () => {
+  const t = 'Art. 1. Tekst z „pojedynczym cudzysłowem.\nArt. 2. Drugi.\nArt. 3. Trzeci.';
+  assert.deepStrictEqual(splitArticles(t).map((a) => a.label), ['Art. 1', 'Art. 2', 'Art. 3']);
+});
+
+test('powtórzone numery artykułów dostają unikalne etykiety', () => {
+  const r = splitArticles('Art. 1. A.\nArt. 2. B.\nArt. 1. C.');
+  assert.deepStrictEqual(r.map((a) => a.label), ['Art. 1', 'Art. 2', 'Art. 1 (2)']);
+});
+
+test('rozpoznaje Art. 22¹ (indeks górny)', () => {
+  const r = splitArticles('Art. 22. a\nArt. 22¹. b\nArt. 23. c');
+  assert.deepStrictEqual(r.map((a) => a.label), ['Art. 22', 'Art. 22¹', 'Art. 23']);
+});
+
+test('batchArticles domyślnie mieści 3 artykuły po 12 tys. znaków', () => {
+  const arts = [1, 2, 3].map((i) => ({ label: `Art. ${i}`, text: 'x'.repeat(12000) }));
+  assert.strictEqual(batchArticles(arts).length, 1);
+});

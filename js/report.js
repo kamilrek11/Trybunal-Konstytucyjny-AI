@@ -12,7 +12,7 @@
     return byQuote ? byQuote.label : null;
   }
 
-  function buildReport(articles, valid, rejected) {
+  function buildReport(articles, valid, rejected, unanalyzedLabels = []) {
     const worst = new Map();
     const findings = valid.map((f) => {
       const label = resolveLabel(articles, f);
@@ -23,13 +23,33 @@
       return { ...f, articleLabel: label || f.articleLabel };
     });
     findings.sort((a, b) => RANK[b.level] - RANK[a.level]);
-    const statuses = articles.map((a) => worst.get(a.label) || 'zgodny');
-    const counts = { niezgodny: 0, watpliwy: 0, zgodny: 0, rejected: rejected.length };
+    const skipped = new Set(unanalyzedLabels);
+    // Wstęp (tytuł, nagłówek) nie jest artykułem: liczy się tylko, gdy ma na sobie zarzut.
+    const scored = articles.filter((a) => !skipped.has(a.label) && (a.label !== 'Wstęp' || worst.has(a.label)));
+    const statuses = scored.map((a) => worst.get(a.label) || 'zgodny');
+    const counts = { niezgodny: 0, watpliwy: 0, zgodny: 0, rejected: rejected.length, unanalyzed: skipped.size };
     statuses.forEach((s) => { counts[s]++; });
-    return { score: computeScore(statuses), counts, findings, total: articles.length };
+    return { score: computeScore(statuses), counts, findings, total: scored.length };
   }
 
-  const api = { buildReport };
+  // Analizuje paczki po kolei. bad_json w jednej paczce nie przerywa reszty (jej artykuły trafiają do `unanalyzed`);
+  // każdy inny błąd (klucz, sieć, limit) przerywa całość.
+  async function analyzeBatches(batches, analyzeFn, onProgress = () => {}) {
+    const findings = [];
+    const unanalyzed = [];
+    for (let i = 0; i < batches.length; i++) {
+      onProgress(i, batches.length);
+      try {
+        findings.push(...(await analyzeFn(batches[i], i)));
+      } catch (e) {
+        if (e && e.kind === 'bad_json') unanalyzed.push(...batches[i].map((a) => a.label));
+        else throw e;
+      }
+    }
+    return { findings, unanalyzed };
+  }
+
+  const api = { buildReport, analyzeBatches };
   if (typeof module !== 'undefined') module.exports = api;
   else root.TK = Object.assign(root.TK || {}, api);
 })(this);

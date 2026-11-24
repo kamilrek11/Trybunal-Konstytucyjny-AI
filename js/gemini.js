@@ -40,7 +40,7 @@
     if (!text) throw new GeminiError('bad_json', 'Model nie zwrócił odpowiedzi.');
     let parsed;
     try {
-      parsed = JSON.parse(text);
+      parsed = JSON.parse(text.trim().replace(/^```(?:json)?\s*/i, '').replace(/\s*```$/, ''));
     } catch (e) {
       throw new GeminiError('bad_json', 'Model zwrócił odpowiedź, której nie da się odczytać.');
     }
