@@ -1,0 +1,55 @@
+<!doctype html>
+<html lang="pl">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Trybunał Konstytucyjny AI</title>
+  <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+  <main>
+    <header>
+      <h1>Trybunał Konstytucyjny AI</h1>
+      <p class="lead">Wgraj ustawę (PDF lub DOCX), a AI oceni jej zgodność z Konstytucją RP.</p>
+    </header>
+
+    <section class="card" aria-labelledby="key-h">
+      <h2 id="key-h">Klucz API Gemini</h2>
+      <div class="row">
+        <input id="apiKey" type="password" autocomplete="off" placeholder="Wklej klucz z Google AI Studio" aria-label="Klucz API Gemini">
+        <button id="clearKey" type="button" class="secondary">Wyczyść klucz</button>
+      </div>
+      <details>
+        <summary>Model</summary>
+        <input id="model" type="text" aria-label="Nazwa modelu Gemini">
+      </details>
+      <p class="hint">Klucz zapisuje się tylko w tej przeglądarce i trafia wyłącznie do Google. Nie wpisuj go do kodu.</p>
+    </section>
+
+    <section id="drop" class="card drop" tabindex="0" role="button" aria-label="Wybierz plik ustawy">
+      <p><strong>Przeciągnij plik tutaj</strong> albo kliknij, aby wybrać</p>
+      <p class="hint">PDF lub DOCX z zaznaczalnym tekstem (bez skanów)</p>
+      <input id="file" type="file" accept=".pdf,.docx" hidden>
+    </section>
+
+    <section id="status" class="card" hidden aria-live="polite">
+      <p id="statusText"></p>
+      <progress id="progress" value="0" max="1"></progress>
+      <button id="cancel" type="button" class="secondary">Anuluj</button>
+    </section>
+
+    <section id="error" class="card error" hidden role="alert"></section>
+    <section id="result" hidden></section>
+  </main>
+
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/mammoth/1.6.0/mammoth.browser.min.js"></script>
+  <script src="js/constitution.js"></script>
+  <script src="js/splitter.js"></script>
+  <script src="js/validate.js"></script>
+  <script src="js/report.js"></script>
+  <script src="js/gemini.js"></script>
+  <script src="js/extract.js"></script>
+  <script src="js/app.js"></script>
+</body>
+</html>
